@@ -1,4 +1,4 @@
-# ECU33072 Mathematical Economics Project
+# ECU33082 Mathematical Economics Project
 
 ## Collaborators:
 - Raj Aryan Upadhyaya (23375852)
