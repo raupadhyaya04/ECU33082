@@ -1,11 +1,16 @@
 import requests
 import pandas as pd
 from itertools import product
+from pathlib import Path
+
+ROOT     = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "Cleaned Data"
+DATA_DIR.mkdir(exist_ok=True)
 
 YEAR_MIN, YEAR_MAX = 2007, 2023
 
 # ---------------------------------------------------------------------------
-# Helper: fetch a CSO PxStat table → tidy DataFrame
+# Helper: fetch a CSO PxStat table : tidy DataFrame
 # ---------------------------------------------------------------------------
 
 def fetch_cso_table(table_id: str) -> pd.DataFrame:
@@ -29,9 +34,9 @@ def fetch_cso_table(table_id: str) -> pd.DataFrame:
 
 
 def save(df: pd.DataFrame, filename: str):
-    path = f"Cleaned Data/{filename}"
+    path = DATA_DIR / filename
     df.to_csv(path, index=False)
-    print(f"  ✓ Saved {len(df)} rows → {path}")
+    print(f"  ✓ Saved {len(df)} rows : {path}")
 
 
 # ============================================================
@@ -66,7 +71,7 @@ gas = gas[["Year", "Half", "Consumption_Band", "Tax_Treatment", "VALUE"]].rename
 )
 gas = gas.sort_values(["Year", "Half"]).reset_index(drop=True)
 save(gas, "Gas_Prices_Residential_2015_2023.csv")
-print("  Note: TMEGB01 starts 2015 — no CSO residential gas price data before that.")
+print("  Note: TMEGB01 starts 2015: no CSO residential gas price data before that.")
 
 # ------------------------------------------------------------
 # 2. Residential Electricity Prices  (TMEGB03)
@@ -96,12 +101,12 @@ elec = elec[["Year", "Half", "Consumption_Band", "Tax_Treatment", "VALUE"]].rena
 )
 elec = elec.sort_values(["Year", "Half"]).reset_index(drop=True)
 save(elec, "Electricity_Prices_Residential_2015_2023.csv")
-print("  Note: TMEGB03 starts 2015 — no CSO residential electricity price data before that.")
+print("  Note: TMEGB03 starts 2015: no CSO residential electricity price data before that.")
 
 # ------------------------------------------------------------
 # 3. CPI for Energy Products  (EIIEEA04)
 #    Annual index covering electricity, gas, petrol, diesel, solid fuels
-#    Goes back to 2000 — fills the pre-2015 gap above
+#    Goes back to 2000: fills the pre-2015 gap above
 # ------------------------------------------------------------
 print("\n[3/6] CPI for Energy Products (EIIEEA04)...")
 energy_cpi = fetch_cso_table("EIIEEA04")
@@ -128,15 +133,22 @@ print(f"  Products covered: {sorted(energy_cpi['Energy_Product'].unique())}")
 # ============================================================
 
 # ------------------------------------------------------------
-# 4a. Quarterly ILO Participation & Unemployment Rates (QNQ20)
-#     Goes back to 1997 Q4, covers through 2017 Q2
+# 4a. Quarterly ILO Participation & Unemployment Rates (QLF02)
+#     Covers 1998Q1 - 2025Q4  (replaces QNQ20 which ended 2017Q2)
 # ------------------------------------------------------------
-print("\n[4/6] Quarterly Employment / Unemployment Rates (QNQ20 + LRM03)...")
-qnq = fetch_cso_table("QNQ20")
+print("\n[4/6] Quarterly Employment / Unemployment Rates (QLF02 + LRM03)...")
+qnq = fetch_cso_table("QLF02")
 qnq = qnq.rename(columns={
     "STATISTIC":      "Statistic",
     "TLIST(Q1)":      "Quarter",
     "C02199V02655":   "Sex",
+})
+# QLF02 has a typo in one stat name ("LO" instead of "ILO") — fix it
+qnq["Statistic"] = qnq["Statistic"].replace({
+    "LO Unemployment Rates (15 - 74 years)":
+        "ILO Unemployment Rates (15 - 74 years)",
+    "LO Unemployment Rates (15 - 74 years) (Seasonally Adjusted)":
+        "ILO Unemployment Rates (15 - 74 years) (Seasonally Adjusted)",
 })
 qnq = qnq[qnq["Sex"] == "Both sexes"].copy()
 qnq["Year"] = qnq["Quarter"].str[:4].astype(int)
@@ -164,16 +176,16 @@ lrm = lrm[["Month", "Statistic", "VALUE"]].rename(
 )
 lrm = lrm.sort_values("Month").reset_index(drop=True)
 
-qnq.to_csv("Cleaned Data/Employment_Rates_Quarterly_ILO_2007_2017.csv", index=False)
-lrm.to_csv("Cleaned Data/Unemployment_Rate_Monthly_2007_2023.csv", index=False)
-print(f"  ✓ Saved {len(qnq)} rows → Cleaned Data/Employment_Rates_Quarterly_ILO_2007_2017.csv")
-print(f"  ✓ Saved {len(lrm)} rows → Cleaned Data/Unemployment_Rate_Monthly_2007_2023.csv")
+qnq.to_csv(DATA_DIR / "Employment_Rates_Quarterly_ILO_2007_2023.csv", index=False)
+lrm.to_csv(DATA_DIR / "Unemployment_Rate_Monthly_2007_2023.csv", index=False)
+print(f"  ✓ Saved {len(qnq)} rows : Employment_Rates_Quarterly_ILO_2007_2023.csv")
+print(f"  ✓ Saved {len(lrm)} rows : Unemployment_Rate_Monthly_2007_2023.csv")
 
 # ------------------------------------------------------------
-# 5. Income — Median Household Disposable Income by Age (SIA13)
-#    Annual, 2004 onwards — already explored, now clean fully
+# 5. Income: Median Household Disposable Income by Age (SIA13)
+#    Annual, 2004 onwards: already explored, now clean fully
 # ------------------------------------------------------------
-print("\n[5/6] Income — Median Disposable Income by Age Group (SIA13)...")
+print("\n[5/6] Income: Median Disposable Income by Age Group (SIA13)...")
 sia13 = fetch_cso_table("SIA13")
 sia13 = sia13.rename(columns={
     "STATISTIC":      "Statistic",
@@ -200,17 +212,17 @@ sia13_wide = sia13.pivot(index="Year", columns="Age_Group",
 sia13_vol = sia13_wide.pct_change() * 100
 sia13_vol.columns = [f"YoY_Pct_{c}" for c in sia13_vol.columns]
 sia13_vol = sia13_vol.dropna(how="all").reset_index()
-sia13_vol.to_csv("Cleaned Data/Income_Volatility_YoY_by_AgeGroup_2007_2023.csv",
+sia13_vol.to_csv(DATA_DIR / "Income_Volatility_YoY_by_AgeGroup_2007_2023.csv",
                  index=False)
-print(f"  ✓ Also saved income volatility (YoY %) → "
-      f"Cleaned Data/Income_Volatility_YoY_by_AgeGroup_2007_2023.csv")
+print(f"  ✓ Also saved income volatility (YoY %) : "
+      f"Income_Volatility_YoY_by_AgeGroup_2007_2023.csv")
 
 # ------------------------------------------------------------
-# 6. Inflation — Monthly CPI All Items + Housing component (CPM13)
+# 6. Inflation: Monthly CPI All Items + Housing component (CPM13)
 #    Already have housing CPI from inflation_data_cleaning.py.
 #    Here we add the broader All Items CPI for context.
 # ------------------------------------------------------------
-print("\n[6/6] Monthly CPI — All Items & Energy sub-index (CPM13)...")
+print("\n[6/6] Monthly CPI: All Items & Energy sub-index (CPM13)...")
 cpm13 = fetch_cso_table("CPM13")
 cpm13 = cpm13.rename(columns={
     "C02439V03429":   "Commodity_Group",
@@ -230,7 +242,7 @@ cpm13 = cpm13[
     (cpm13["Statistic"] == keep_stat)
 ].copy()
 
-# Parse month code "2007M01" → datetime
+# Parse month code "2007M01" : datetime
 cpm13["Month_dt"] = pd.to_datetime(cpm13["Month_Code"], format="%YM%m")
 cpm13["Year"] = cpm13["Month_dt"].dt.year
 cpm13 = cpm13[(cpm13["Year"] >= YEAR_MIN) & (cpm13["Year"] <= YEAR_MAX)]

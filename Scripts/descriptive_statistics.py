@@ -10,8 +10,10 @@ import numpy as np
 from pathlib import Path
 from scipy import stats as scipy_stats
 
-DATA_DIR = Path("Cleaned Data")
-OUT_DIR  = Path("Cleaned Data")
+ROOT     = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "Cleaned Data"
+OUT_DIR  = ROOT / "Output"
+OUT_DIR.mkdir(exist_ok=True)
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -127,10 +129,10 @@ def desc(df: pd.DataFrame, value_col: str,
 all_stats: dict[str, pd.DataFrame] = {}
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 1. INFLATION — Housing CPI (monthly, 2007–2023)
+# 1. INFLATION: Housing CPI (monthly, 2007–2023)
 #    Primary comparator for energy poverty transitions
 # ══════════════════════════════════════════════════════════════════════════════
-section("1. INFLATION — Housing CPI (Monthly, 2007–2023)")
+section("1. INFLATION: Housing CPI (Monthly, 2007–2023)")
 housing_cpi = pd.read_csv(DATA_DIR / "CPI_Housing_2007_2023.csv")
 housing_cpi["Month_dt"] = pd.to_datetime(housing_cpi["Month"], format="%Y %B")
 
@@ -156,9 +158,9 @@ all_stats["1_Housing_CPI_Overall"]       = d1_overall
 all_stats["1_Housing_CPI_Annual_Avg"]    = d1_annual
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. INFLATION — All Items & Housing CPI (monthly, 2007–2023)
+# 2. INFLATION: All Items & Housing CPI (monthly, 2007–2023)
 # ══════════════════════════════════════════════════════════════════════════════
-section("2. INFLATION — All Items vs Housing CPI YoY % (Monthly, 2007–2023)")
+section("2. INFLATION: All Items vs Housing CPI YoY % (Monthly, 2007–2023)")
 cpi_broad = pd.read_csv(DATA_DIR / "CPI_AllItems_and_Housing_Monthly_2007_2023.csv")
 cpi_broad["Month_dt"] = pd.to_datetime(cpi_broad["Month_dt"])
 
@@ -178,7 +180,7 @@ print(corr_cpi.to_string())
 all_stats["2_CPI_Correlation"] = corr_cpi.reset_index()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3. INFLATION — Inflation by Income Decile (monthly, 2017–2023)
+# 3. INFLATION: Inflation by Income Decile (monthly, 2017–2023)
 #    Key for energy poverty: do lower deciles face higher inflation?
 # ══════════════════════════════════════════════════════════════════════════════
 section("3. INFLATION BY INCOME DECILE (Monthly, 2017–2023)")
@@ -203,7 +205,7 @@ print(d3_spread.to_string(index=False))
 all_stats["3_Inflation_Decile_Spread"] = d3_spread
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 4. ENERGY PRICES — CPI for Energy Products (annual, 2007–2023)
+# 4. ENERGY PRICES: CPI for Energy Products (annual, 2007–2023)
 #    Index values for electricity, gas, petrol, diesel, solid fuel
 # ══════════════════════════════════════════════════════════════════════════════
 section("4. ENERGY CPI BY PRODUCT (Annual, 2007–2023)")
@@ -230,7 +232,7 @@ print(d4b.to_string(index=False))
 all_stats["4_Energy_CPI_YoY_by_Product"] = d4b
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 5. ENERGY PRICES — Residential Gas & Electricity (semi-annual, 2015–2023)
+# 5. ENERGY PRICES: Residential Gas & Electricity (semi-annual, 2015–2023)
 # ══════════════════════════════════════════════════════════════════════════════
 section("5. RESIDENTIAL GAS & ELECTRICITY PRICES (Semi-Annual, 2015–2023)")
 
@@ -245,9 +247,9 @@ print(d5.to_string(index=False))
 # By year
 d5a_yr = gas.groupby("Year")["Price_EUR_per_GJ"].mean().round(4).reset_index()
 d5b_yr = elec.groupby("Year")["Price_EUR_per_kWh"].mean().round(4).reset_index()
-print("\n[Gas — Annual Average Price €/GJ]")
+print("\n[Gas: Annual Average Price €/GJ]")
 print(d5a_yr.to_string(index=False))
-print("\n[Electricity — Annual Average Price €/kWh]")
+print("\n[Electricity: Annual Average Price €/kWh]")
 print(d5b_yr.to_string(index=False))
 
 all_stats["5_Gas_Elec_Prices_Overall"]    = d5
@@ -255,9 +257,9 @@ all_stats["5_Gas_Annual_Avg"]             = d5a_yr
 all_stats["5_Electricity_Annual_Avg"]     = d5b_yr
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 6. INCOME — Median Real Disposable Income by Age Group (annual, 2007–2023)
+# 6. INCOME: Median Real Disposable Income by Age Group (annual, 2007–2023)
 # ══════════════════════════════════════════════════════════════════════════════
-section("6. INCOME — Median Real Disposable Income by Age Group (Annual, 2007–2023)")
+section("6. INCOME: Median Real Disposable Income by Age Group (Annual, 2007–2023)")
 income = pd.read_csv(DATA_DIR / "Income_Median_by_AgeGroup_2007_2023.csv")
 
 d6 = desc(income, "Median_Real_Disposable_Income_EUR",
@@ -270,12 +272,12 @@ income_vol = pd.read_csv(DATA_DIR / "Income_Volatility_YoY_by_AgeGroup_2007_2023
 vol_long = income_vol.melt(id_vars="Year", var_name="Age_Group",
                            value_name="YoY_Pct_Change").dropna()
 d6b = desc(vol_long, "YoY_Pct_Change", group_cols=["Age_Group"])
-print("\n[Income Volatility — YoY % Change]")
+print("\n[Income Volatility: YoY % Change]")
 print(d6b.to_string(index=False))
 all_stats["6_Income_Volatility"] = d6b
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 7. INCOME — Disposable Income by Tenure (annual, 2007–2023)
+# 7. INCOME: Disposable Income by Tenure (annual, 2007–2023)
 # ══════════════════════════════════════════════════════════════════════════════
 section("7. INCOME BY TENURE TYPE (Annual, 2007–2023)")
 tenure = pd.read_csv(DATA_DIR / "Disposable_Income_by_Tenure_2007_2023.csv")
@@ -296,11 +298,11 @@ all_stats["7_Income_by_Tenure"]   = d7
 all_stats["7_Tenure_Income_Gap"]  = tenure_wide.reset_index()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 8. EMPLOYMENT / UNEMPLOYMENT (Quarterly ILO 2007–2017 + Monthly 2007–2023)
+# 8. EMPLOYMENT / UNEMPLOYMENT (Quarterly ILO 2007–2023 + Monthly 2007–2023)
 # ══════════════════════════════════════════════════════════════════════════════
 section("8. EMPLOYMENT & UNEMPLOYMENT RATES (2007–2023)")
 
-emp_q = pd.read_csv(DATA_DIR / "Employment_Rates_Quarterly_ILO_2007_2017.csv")
+emp_q = pd.read_csv(DATA_DIR / "Employment_Rates_Quarterly_ILO_2007_2023.csv")
 unemp = pd.read_csv(DATA_DIR / "Unemployment_Rate_Monthly_2007_2023.csv")
 
 d8a = desc(emp_q, "Rate_Pct", group_cols=["Statistic"])
@@ -330,8 +332,8 @@ all_stats["8_Unemployment_Annual_Avg"]   = d8b_yr
 # 9. POVERTY RATES (annual, 2007–2023)
 #    Proxy for energy poverty transitions
 # ══════════════════════════════════════════════════════════════════════════════
-section("9. POVERTY RATES (Annual, 2007–2023)")
-poverty = pd.read_csv(DATA_DIR / "Poverty_Rates_2007_2023.csv")
+section("9. POVERTY RATES (Annual, 2004–2024)")
+poverty = pd.read_csv(DATA_DIR / "Poverty_Rates_2004_2024.csv")
 
 d9 = desc(poverty, "VALUE", group_cols=["Statistic"])
 print(d9.to_string(index=False))
@@ -348,9 +350,9 @@ all_stats["9_Poverty_by_Year"] = poverty.pivot_table(
 ).round(2).reset_index()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SUMMARY TABLE — Key Variables for Energy Poverty Transition Analysis
+# SUMMARY TABLE: Key Variables for Energy Poverty Transition Analysis
 # ══════════════════════════════════════════════════════════════════════════════
-section("SUMMARY — Key Variables (Energy Poverty Transition Analysis)")
+section("SUMMARY: Key Variables (Energy Poverty Transition Analysis)")
 
 summary_rows = [
     ("Housing CPI – YoY Inflation (%)",
@@ -418,32 +420,32 @@ print(summary[[c for c in compact_cols if c in summary.columns]].to_string(index
 all_stats["SUMMARY"] = summary
 
 # ══════════════════════════════════════════════════════════════════════════════
-# EXPORT — Single sheet with all variables, separated by blank rows + headers
+# EXPORT: Single sheet with all variables, separated by blank rows + headers
 # ══════════════════════════════════════════════════════════════════════════════
 out_path = OUT_DIR / "Descriptive_Statistics.xlsx"
 
 section_labels = {
-    "1_Housing_CPI_Overall":         "1. Housing CPI — Overall (Monthly, 2007–2023)",
-    "1_Housing_CPI_Annual_Avg":      "1. Housing CPI — Annual Averages",
+    "1_Housing_CPI_Overall":         "1. Housing CPI: Overall (Monthly, 2007–2023)",
+    "1_Housing_CPI_Annual_Avg":      "1. Housing CPI: Annual Averages",
     "2_CPI_AllItems_vs_Housing":     "2. All Items vs Housing CPI YoY % (Monthly, 2007–2023)",
     "2_CPI_Correlation":             "2. Correlation: All Items vs Housing CPI",
     "3_Inflation_by_Decile":         "3. Inflation by Income Decile (Monthly, 2017–2023)",
     "3_Inflation_Decile_Spread":     "3. Inflation Spread Across Deciles",
-    "4_Energy_CPI_by_Product":       "4. Energy CPI by Product — Index Level (Annual, 2007–2023)",
-    "4_Energy_CPI_YoY_by_Product":   "4. Energy CPI by Product — YoY % Change",
-    "5_Gas_Elec_Prices_Overall":     "5. Residential Gas & Electricity Prices — Overall (2015–2023)",
-    "5_Gas_Annual_Avg":              "5. Gas Prices — Annual Average (€/GJ)",
-    "5_Electricity_Annual_Avg":      "5. Electricity Prices — Annual Average (€/kWh)",
+    "4_Energy_CPI_by_Product":       "4. Energy CPI by Product: Index Level (Annual, 2007–2023)",
+    "4_Energy_CPI_YoY_by_Product":   "4. Energy CPI by Product: YoY % Change",
+    "5_Gas_Elec_Prices_Overall":     "5. Residential Gas & Electricity Prices: Overall (2015–2023)",
+    "5_Gas_Annual_Avg":              "5. Gas Prices: Annual Average (€/GJ)",
+    "5_Electricity_Annual_Avg":      "5. Electricity Prices: Annual Average (€/kWh)",
     "6_Income_by_AgeGroup":          "6. Median Real Disposable Income by Age Group (Annual, 2007–2023)",
-    "6_Income_Volatility":           "6. Income Volatility — YoY % Change by Age Group",
+    "6_Income_Volatility":           "6. Income Volatility: YoY % Change by Age Group",
     "7_Income_by_Tenure":            "7. Median Real Disposable Income by Tenure (Annual, 2007–2023)",
     "7_Tenure_Income_Gap":           "7. Owner vs Renter Income Gap (€)",
-    "8_Employment_ILO_Quarterly":    "8. Employment & Participation Rates — Quarterly ILO (2007–2017)",
-    "8_Unemployment_Overall":        "8. Unemployment Rate — Monthly SA Overall (2007–2023)",
-    "8_Unemployment_Annual_Avg":     "8. Unemployment Rate — Annual Average",
-    "9_Poverty_Rates":               "9. Poverty Rates — Overall",
-    "9_Poverty_by_Year":             "9. Poverty Rates — By Year",
-    "SUMMARY":                       "SUMMARY — All Key Variables (Energy Poverty Transition Analysis)",
+    "8_Employment_ILO_Quarterly":    "8. Employment & Participation Rates: Quarterly ILO (2007–2023)",
+    "8_Unemployment_Overall":        "8. Unemployment Rate: Monthly SA Overall (2007–2023)",
+    "8_Unemployment_Annual_Avg":     "8. Unemployment Rate: Annual Average",
+    "9_Poverty_Rates":               "9. Poverty Rates: Overall (2004–2024)",
+    "9_Poverty_by_Year":             "9. Poverty Rates: By Year (2004–2024)",
+    "SUMMARY":                       "SUMMARY: All Key Variables (Energy Poverty Transition Analysis)",
 }
 
 from openpyxl import load_workbook
@@ -509,5 +511,5 @@ with pd.ExcelWriter(out_path, engine="openpyxl") as writer:
         col_letter = get_column_letter(col_cells[0].column)
         worksheet.column_dimensions[col_letter].width = min(max_len + 4, 50)
 
-print(f"\n✅  Descriptive statistics exported → {out_path}")
+print(f"\n✅  Descriptive statistics exported : {out_path}")
 print(f"    Sheets: 'Summary' (key variables) + 'All Variables' (full detail)")

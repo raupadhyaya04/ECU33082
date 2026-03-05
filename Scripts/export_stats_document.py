@@ -1,13 +1,13 @@
 """
-Export Descriptive Statistics — Document-Ready Format
+Export Descriptive Statistics: Document-Ready Format
 ======================================================
 Produces TWO narrow sheets designed to be copy-pasted into a document:
 
-  Sheet 1 "Summary Stats"   (12 cols) — the write-up table:
+  Sheet 1 "Summary Stats"   (12 cols): the write-up table:
       Variable | N | Mean | Trim.Mean | Median | Std Dev | CV% | IQR | MAD
                | Skewness | Kurtosis | Shape note
 
-  Sheet 2 "Percentile Table" (11 cols) — the position/frequency table:
+  Sheet 2 "Percentile Table" (11 cols): the position/frequency table:
       Variable | N | N+ | N- | %+ | %-
                | Min | P10 | P25 | Median | P75 | P90 | Max
 
@@ -23,8 +23,11 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-DATA_DIR = Path("Cleaned Data")
-OUT_PATH = DATA_DIR / "Descriptive_Statistics_Document.xlsx"
+ROOT     = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "Cleaned Data"
+OUT_DIR  = ROOT / "Output"
+OUT_DIR.mkdir(exist_ok=True)
+OUT_PATH = OUT_DIR / "Descriptive_Statistics_Document.xlsx"
 
 # ── stat engine ───────────────────────────────────────────────────────────────
 
@@ -63,11 +66,11 @@ def full_stats(s: pd.Series) -> dict:
         "Max":       float(s.max()),
     }
 
-# Sheet 1 columns — central tendency + dispersion + shape  (13 cols total)
+# Sheet 1 columns: central tendency + dispersion + shape  (13 cols total)
 S1_COLS = ["N", "Mean", "Trim.Mean", "Median", "Std Dev", "CV%",
            "IQR", "MAD", "Skewness", "Kurtosis"]
 
-# Sheet 2 columns — frequency + position  (10 cols total)
+# Sheet 2 columns: frequency + position  (10 cols total)
 S2_COLS = ["N", "N+", "N-", "%+", "%-", "Min", "P10", "P25", "P75", "P90", "Max"]
 
 def r(val, rule):
@@ -106,9 +109,9 @@ elec        = pd.read_csv(DATA_DIR / "Electricity_Prices_Residential_2015_2023.c
 income      = pd.read_csv(DATA_DIR / "Income_Median_by_AgeGroup_2007_2023.csv")
 income_vol  = pd.read_csv(DATA_DIR / "Income_Volatility_YoY_by_AgeGroup_2007_2023.csv")
 tenure      = pd.read_csv(DATA_DIR / "Disposable_Income_by_Tenure_2007_2023.csv")
-emp_q       = pd.read_csv(DATA_DIR / "Employment_Rates_Quarterly_ILO_2007_2017.csv")
+emp_q       = pd.read_csv(DATA_DIR / "Employment_Rates_Quarterly_ILO_2007_2023.csv")
 unemp       = pd.read_csv(DATA_DIR / "Unemployment_Rate_Monthly_2007_2023.csv")
-poverty     = pd.read_csv(DATA_DIR / "Poverty_Rates_2007_2023.csv")
+poverty     = pd.read_csv(DATA_DIR / "Poverty_Rates_2004_2024.csv")
 
 energy_wide = energy_cpi.pivot(index="Year", columns="Energy_Product", values="CPI_Index")
 energy_yoy  = (energy_wide.pct_change() * 100).reset_index().melt(
@@ -126,7 +129,7 @@ vol_long = income_vol.melt(id_vars="Year", var_name="Age_Group",
 
 SECTIONS = [
     {
-        "heading": "1.  INFLATION — Housing & All-Items CPI",
+        "heading": "1.  INFLATION: Housing & All-Items CPI",
         "note":    "Monthly, 2007–2023  |  Source: CSO CPM01, CPM13",
         "rows": [
             ("Housing CPI – YoY % Change",
@@ -172,7 +175,7 @@ SECTIONS = [
         ],
     },
     {
-        "heading": "3.  ENERGY CPI — Index Level & YoY % Change by Product",
+        "heading": "3.  ENERGY CPI: Index Level & YoY % Change by Product",
         "note":    "Annual, 2007–2023  |  Source: CSO EIIEEA04  |  N=17 (index), N=16 (YoY)",
         "rows": [
             ("Electricity – CPI Index Level",
@@ -208,7 +211,7 @@ SECTIONS = [
         ],
     },
     {
-        "heading": "5.  INCOME — Median Real Disposable Income",
+        "heading": "5.  INCOME: Median Real Disposable Income",
         "note":    "Annual, 2007–2023  |  Source: CSO SIA13, SIA52  |  Constant euros  |  N=13",
         "rows": [
             ("18–64 Years – Median Real Disposable Income (€)",
@@ -231,7 +234,7 @@ SECTIONS = [
     },
     {
         "heading": "6.  EMPLOYMENT & UNEMPLOYMENT",
-        "note":    "Quarterly ILO 2007–2017 (CSO QNQ20, N=42);  Monthly SA 2007–2023 (CSO LRM03, N=100)",
+        "note":    "Quarterly ILO 2007–2023 (CSO QLF02);  Monthly SA 2007–2023 (CSO LRM03)",
         "rows": [
             ("ILO Participation Rate – 15+ (%)",
              emp_q.loc[emp_q["Statistic"] == "ILO Participation Rates (15 years and over)",
@@ -253,14 +256,12 @@ SECTIONS = [
     },
     {
         "heading": "7.  POVERTY RATES",
-        "note":    "Annual (CSO SIA01)  |  ⚠ API currently returns 2007 only",
+        "note":    "Annual, 2004–2024  |  Source: CSO SIA24 (2004–2019) + CSO SILC press releases (2020–2024)  |  N=21",
         "rows": [
             ("At-Risk-of-Poverty Rate – 60% Median Income (%)",
-             poverty.loc[poverty["Statistic"].str.contains("At Risk", na=False), "VALUE"], "rate"),
-            ("Consistent Poverty Rate – 11 New Indicators (%)",
-             poverty.loc[poverty["Statistic"].str.contains("11 New", na=False), "VALUE"], "rate"),
-            ("Consistent Poverty Rate – 8 Old Indicators (%)",
-             poverty.loc[poverty["Statistic"].str.contains("1 of 8", na=False), "VALUE"], "rate"),
+             poverty.loc[poverty["Statistic"] == "At Risk of Poverty Rate", "VALUE"], "rate"),
+            ("Consistent Poverty Rate (%)",
+             poverty.loc[poverty["Statistic"] == "Consistent Poverty Rate", "VALUE"], "rate"),
         ],
     },
 ]
@@ -295,7 +296,7 @@ def write_sheet(wb: Workbook, sheet_title: str, stat_cols: list,
     # ── title
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=NCOLS)
     tc = ws.cell(1, 1,
-        value="Descriptive Statistics — Energy Poverty Transition Analysis"
+        value="Descriptive Statistics: Energy Poverty Transition Analysis"
               f"  [{col_group_label}]  (Ireland, 2007–2023)")
     tc.font = Font(bold=True, color=WHITE, size=12)
     tc.fill = filled(DARK_BLUE)
@@ -392,7 +393,7 @@ ws2, r2 = write_sheet(
 wb.save(OUT_PATH)
 
 n_vars = sum(len(s["rows"]) for s in SECTIONS)
-print(f"\n✅  Exported → {OUT_PATH}")
-print(f"   Sheet 1 'Central Tendency & Dispersion'  —  {len(S1_COLS)+1} columns  ({r1-1} rows)")
-print(f"   Sheet 2 'Frequency & Position'           —  {len(S2_COLS)+1} columns  ({r2-1} rows)")
+print(f"\n✅  Exported : {OUT_PATH}")
+print(f"   Sheet 1 'Central Tendency & Dispersion' :  {len(S1_COLS)+1} columns  ({r1-1} rows)")
+print(f"   Sheet 2 'Frequency & Position'          :  {len(S2_COLS)+1} columns  ({r2-1} rows)")
 print(f"   {n_vars} variable rows across {len(SECTIONS)} sections")

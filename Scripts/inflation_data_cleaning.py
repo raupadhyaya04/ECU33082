@@ -1,7 +1,13 @@
 import pandas as pd
+from pathlib import Path
+
+ROOT       = Path(__file__).resolve().parent.parent
+DATA_DIR   = ROOT / "Cleaned Data"
+COLLECT_DIR = ROOT / "Collected Data"
+DATA_DIR.mkdir(exist_ok=True)
 
 # Load raw CPI data
-df = pd.read_csv("Collected Data/CPM01.20260304T160359.csv")
+df = pd.read_csv(next(COLLECT_DIR.glob("CPM01.*.csv")))
 
 # Extract the year from the 'Month' column (format: "YYYY MonthName")
 df["Year"] = df["Month"].str.split(" ").str[0].astype(int)
@@ -47,7 +53,7 @@ df["Month_dt"] = pd.to_datetime(df["Month"], format="%Y %B")
 df = df.sort_values("Month_dt").drop(columns="Month_dt").reset_index(drop=True)
 
 # Save to Cleaned Data folder
-df.to_csv("Cleaned Data/CPI_Housing_2007_2023.csv", index=False)
+df.to_csv(DATA_DIR / "CPI_Housing_2007_2023.csv", index=False)
 
 print(f"Rows saved: {len(df)}")
 print(df.head())
