@@ -34,12 +34,19 @@ def compute_conditional_transitions():
     
     states = _safe_sort_states(df['Joint_State'])
     
-    # We will split conditional transitions Pre-2015 (Pre-SDGs) vs Post-2015 (Post-SDGs)
+    # Standard Split
     pre_counts = pd.DataFrame(0, index=states, columns=states)
     post_counts = pd.DataFrame(0, index=states, columns=states)
     
-    pre_pairs = 0
-    post_pairs = 0
+    # Crisis vs Baseline Split
+    crisis_counts = pd.DataFrame(0, index=states, columns=states)
+    baseline_counts = pd.DataFrame(0, index=states, columns=states)
+    
+    # Pre/Post Split (EXCLUDING CRISIS YEARS for robustness check)
+    pre_stable_counts = pd.DataFrame(0, index=states, columns=states)
+    post_stable_counts = pd.DataFrame(0, index=states, columns=states)
+
+    crisis_years = {2008, 2009, 2020, 2021, 2022}
     
     # Iterate countries
     for code, grp in df.groupby("Country_Code"):
@@ -49,41 +56,47 @@ def compute_conditional_transitions():
             y1 = grp.iloc[i]["Year"]
             y2 = grp.iloc[i+1]["Year"]
             
-            # Only strictly consecutive years
             if y2 == y1 + 1:
                 st1 = grp.iloc[i]["Joint_State"]
                 st2 = grp.iloc[i+1]["Joint_State"]
                 
-                # Check regime of year 1 (the starting state year indicates the regime)
+                # 1. Standard Pre vs Post 2015
                 if y1 < 2015:
                     pre_counts.loc[st1, st2] += 1
-                    pre_pairs += 1
                 else:
                     post_counts.loc[st1, st2] += 1
-                    post_pairs += 1
+                
+                # 2. Crisis vs Baseline
+                is_crisis = y1 in crisis_years or y2 in crisis_years
+                if is_crisis:
+                    crisis_counts.loc[st1, st2] += 1
+                else:
+                    baseline_counts.loc[st1, st2] += 1
                     
-    # Function to save
-    def save_matrix(counts_df, regime_name, pairs_count):
-        # We need Left-Stochastic (X-axis = t, Y-axis = t+1)
-        # However, the loop above built it as counts_df.loc[st1, st2], meaning row=t, col=t+1.
-        # Transpose to strictly left-stochastic before saving
+                    # 3. Stable Pre vs Post 2015 (only non-crisis years)
+                    if y1 < 2015:
+                        pre_stable_counts.loc[st1, st2] += 1
+                    else:
+                        post_stable_counts.loc[st1, st2] += 1
+                    
+    def save_matrix(counts_df, regime_name):
         counts_df_t = counts_df.T
-        
         counts_fp = OUT_DIR / f"Transitions_{regime_name}_runs_counts.csv"
         colpct_fp = OUT_DIR / f"Transitions_{regime_name}_runs_colpct.csv"
         
         counts_df_t.to_csv(counts_fp)
         
-        # Column %
         col_sums = counts_df_t.sum(axis=0).replace(0, np.nan)
         colpct_df = counts_df_t.div(col_sums, axis=1).fillna(0) * 100
         colpct_df.round(1).to_csv(colpct_fp)
         
-        print(f"\n[{regime_name.upper()}] Transition Matrix ({pairs_count} year-pairs):")
-        print(f"Saved to {OUT_DIR}")
-        
-    save_matrix(pre_counts, "Pre_2015", pre_pairs)
-    save_matrix(post_counts, "Post_2015", post_pairs)
+    save_matrix(pre_counts, "Pre_2015")
+    save_matrix(post_counts, "Post_2015")
+    save_matrix(crisis_counts, "Crisis")
+    save_matrix(baseline_counts, "Baseline")
+    save_matrix(pre_stable_counts, "Pre_2015_Stable")
+    save_matrix(post_stable_counts, "Post_2015_Stable")
+    print("✅ All conditional matrices generated seamlessly.")
 
 if __name__ == "__main__":
     compute_conditional_transitions()

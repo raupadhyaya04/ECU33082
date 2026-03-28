@@ -1,0 +1,5 @@
+Global Chi-Square Test for Markov Homogeneity (Pre vs Post 2015)
+Global Chi-Square Stat: 48.00674660886726
+Degrees of Freedom: 36
+Global P-Value: 0.08702237304191794
+Conclusion: No significant shift
